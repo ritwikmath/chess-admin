@@ -1,0 +1,187 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Page Wrapper -->
+<div id="wrapper">
+
+    {% include "includes/nav.html" %}
+
+    <div id="content-wrapper" class="d-flex flex-column">
+        <div id="content">
+
+            {% include "includes/topbar.html" %}
+
+            <div class="container-fluid">
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Customers</h1>
+                    <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
+                            class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+                </div>
+            </div>
+            <div class="container mt-5">
+                <div class="row justify-content-between">
+                    <div>
+                        <label for="show" class="pr-2 col-form-label">Show</label>
+                        <select class="form-select" aria-label="Show" id="show" onchange="changeLimit(event)">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                          </select>
+                    </div>
+                    <input type="text" name="search" id="search" onkeypress="searchCustomers(event)" class="form-control w-25" placeholder="Search Customer">
+                </div>
+                <div class="row my-5">
+                    <table class="table" id="myTable">
+                        <thead>
+                          <tr>
+                            <th scope="col">Id</th>
+                            <th scope="col">First Name</th>
+                            <th scope="col">Last Name</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Address</th>
+                          </tr>
+                        </thead>
+                        <tbody></tbody>
+                      </table>
+                </div>
+                <div class="row justify-content-center">
+                    <nav aria-label="Page navigation example">
+                        <ul class="pagination" id="pagination">
+                            <!-- <li class="page-item disabled" id="previous-page-button">
+                                <a class="page-link" onclick="goToPreviousPage()" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li> -->
+                            <!-- {% for i in pages %}
+                                <li class="page-item"><a class="page-link page-link-num" onclick="changePageTo({{i}})" id="page-link-{{i}}" data="{{i}}">{{i}}</a></li>
+                            {% endfor %} -->
+                            <!-- <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li> -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- End of Page Wrapper -->
+
+<!-- Scroll to Top Button-->
+<a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+</a>
+
+<!-- Logout Modal-->
+<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                <a class="btn btn-primary" href="login.html">Logout</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block jsscript  %}
+    <script>
+        let current_page = 1
+        let search = null
+
+        window.onload = async () => {
+            populateTable()
+        }
+
+        function goToPreviousPage() {
+            alert(current_page)
+        }
+
+        function changePageTo(page) {
+            if (current_page === page) return;
+            current_page = page
+            populateTable()
+        }
+
+        function searchCustomers(event) {
+            if (event.key === "Enter") {
+                if (event.target.value === '') {
+                    search = null
+                } else {
+                    search = event.target.value
+                }
+                populateTable()
+            }
+        }
+
+        function changeLimit(e) {
+            populateTable()
+        }
+
+        function updatePagination(count) {
+            const pagination = document.getElementById("pagination")
+            const show = document.getElementById('show').value;
+            let content = ""
+            let total = {{count}}
+            if (search) {
+                total = count
+            }
+            for (let i = 1; i <= Math.ceil(total/show); i++) {
+                content += `<li class="page-item ${current_page === i && 'active'}"><a href="javascript:void(0)" class="page-link page-link-num" onclick="changePageTo(${i})" id="page-link-${i}" data="${i}">${i}</a></li>`
+            }
+            pagination.innerHTML = content
+        }
+
+        async function populateTable() {
+            // if (current_page !== 1) {
+            //     document.getElementById('previous-page-button').classList.remove('disabled')
+            // } else {
+            //     document.getElementById('previous-page-button').classList.add('disabled')
+            // }
+            document.querySelectorAll('.page-link-num').forEach(element => {
+                if (element.getAttribute('data') == current_page) {
+                    element.parentElement.classList.add('disabled')
+                } else {
+                    element.parentElement.classList.remove('disabled')
+                }
+            })
+            const show = document.getElementById('show').value;
+            const response = await fetch(`/api/customers?show=${show}&page=${current_page}${search ? `&search=${search}` : ''}`)
+            const {customers, count} = await response.json()
+
+            const tbody = document.getElementById('myTable').getElementsByTagName('tbody')[0];
+
+            // Clear existing rows
+            tbody.innerHTML = "";
+
+            // Loop through the JSON data and add rows to the table
+            for (var i = 0; i < customers.length; i++) {
+                var row = tbody.insertRow(i);
+
+                // Insert cells for each property
+                var cellId = row.insertCell(0);
+                var cellFirstName = row.insertCell(1);
+                var cellLastName = row.insertCell(2);
+                var cellEmail = row.insertCell(3);
+                var cellAddress = row.insertCell(4);
+
+                // Populate cells with data
+                cellId.innerHTML = customers[i].id;
+                cellFirstName.innerHTML = customers[i].first_name;
+                cellLastName.innerHTML = customers[i].last_name;
+                cellEmail.innerHTML = customers[i].email;
+                cellAddress.innerHTML = `${customers[i].address}, ${customers[i].district}, ${customers[i].state}, ${customers[i].country}`;
+            }
+            updatePagination(count)
+        }
+    </script>
+{% endblock %}
